@@ -27,9 +27,10 @@ jobs:
       - name: Package Extension with consistent name
         run: |
           npm run package
-          # Rename the VSIX file to a consistent name
+          # Find and rename the VSIX file
           VERSION=$(node -p "require('./package.json').version")
-          mv claude-restarter-$VERSION.vsix claude-restarter.vsix
+          find . -name "claude-restarter-*.vsix" -exec cp {} claude-restarter.vsix \;
+          ls -la *.vsix
         
       - name: Publish to VS Code Marketplace
         run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}

@@ -55,7 +55,8 @@
     "compile": "echo 'Skipping compilation, using existing files'",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "package": "npx @vscode/vsce package && node -e \"const fs = require('fs'); const pkg = require('./package.json'); fs.renameSync('claude-restarter-' + pkg.version + '.vsix', 'claude-restarter.vsix');\"",
+    "package": "npx @vscode/vsce package",
+    "package-rename": "npx @vscode/vsce package && node -e \"const fs = require('fs'); const pkg = require('./package.json'); try { fs.renameSync('claude-restarter-' + pkg.version + '.vsix', 'claude-restarter.vsix'); console.log('Renamed VSIX file successfully'); } catch(e) { console.error('Error renaming file:', e.message); }\"",
     "publish": "npx @vscode/vsce publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
