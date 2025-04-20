@@ -94,9 +94,22 @@ function activate(context) {
     
     // When the file is changed
     fileWatcher.onDidChange((uri) => {
-        console.log(`Claude config file changed: ${uri.fsPath}, restarting Claude...`);
-        vscode.window.showInformationMessage('Claude config file saved, restarting Claude...');
-        restartClaude();
+        console.log(`Claude config file changed: ${uri.fsPath}`);
+        
+        // Ask user if they want to restart Claude
+        vscode.window.showInformationMessage(
+            'Claude config file saved. Do you want to restart Claude Desktop?',
+            { modal: false },
+            'Yes', 'No'
+        ).then(selection => {
+            if (selection === 'Yes') {
+                console.log('User confirmed restart');
+                vscode.window.showInformationMessage('Restarting Claude...');
+                restartClaude();
+            } else {
+                console.log('User declined restart');
+            }
+        });
     });
     
     // When the file is deleted
@@ -119,9 +132,22 @@ function activate(context) {
                 const newFileWatcher = vscode.workspace.createFileSystemWatcher(newConfigPath, false, false, false);
                 
                 newFileWatcher.onDidChange((uri) => {
-                    console.log(`Claude config file changed: ${uri.fsPath}, restarting Claude...`);
-                    vscode.window.showInformationMessage('Claude config file saved, restarting Claude...');
-                    restartClaude();
+                    console.log(`Claude config file changed: ${uri.fsPath}`);
+                    
+                    // Ask user if they want to restart Claude
+                    vscode.window.showInformationMessage(
+                        'Claude config file saved. Do you want to restart Claude Desktop?',
+                        { modal: false },
+                        'Yes', 'No'
+                    ).then(selection => {
+                        if (selection === 'Yes') {
+                            console.log('User confirmed restart');
+                            vscode.window.showInformationMessage('Restarting Claude...');
+                            restartClaude();
+                        } else {
+                            console.log('User declined restart');
+                        }
+                    });
                 });
                 
                 context.subscriptions.push(newFileWatcher);
@@ -140,8 +166,21 @@ function activate(context) {
             
             if (lastModifiedTime && new Date(lastModifiedTime).getTime() !== currentStats.mtime.getTime()) {
                 console.log('File change detected through manual check');
-                vscode.window.showInformationMessage('Claude config file changed, restarting Claude...');
-                restartClaude();
+                
+                // Ask user if they want to restart Claude
+                vscode.window.showInformationMessage(
+                    'Claude config file changed. Do you want to restart Claude Desktop?',
+                    { modal: false },
+                    'Yes', 'No'
+                ).then(selection => {
+                    if (selection === 'Yes') {
+                        console.log('User confirmed restart');
+                        vscode.window.showInformationMessage('Restarting Claude...');
+                        restartClaude();
+                    } else {
+                        console.log('User declined restart');
+                    }
+                });
             }
             
             // Update the last modified time

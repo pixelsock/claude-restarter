@@ -5,4 +5,6 @@ src/**
 node_modules/**
 tsconfig.json
 **/*.map
-**/*.ts 
+**/*.ts
+# Make sure these files are not ignored
+!icon.png 
