@@ -39,8 +39,8 @@
       "properties": {
         "claudeRestarter.configFilePath": {
           "type": "string",
-          "default": "/Users/nick/Library/Application Support/Claude/claude_desktop_config.json",
-          "description": "The path to the Claude config file to watch"
+          "default": "${env:HOME}/Library/Application Support/Claude/claude_desktop_config.json",
+          "description": "The path to the Claude config file to watch (on Windows, uses %APPDATA%\\Claude)"
         },
         "claudeRestarter.restartDelay": {
           "type": "number",
