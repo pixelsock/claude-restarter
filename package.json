@@ -2,7 +2,7 @@
   "name": "claude-restarter",
   "displayName": "Claude Restarter",
   "description": "Restart Claude app automatically when config file is saved",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "publisher": "StumpWorks",
   "repository": {
     "type": "git",
@@ -55,7 +55,7 @@
     "compile": "echo 'Skipping compilation, using existing files'",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "package": "npx @vscode/vsce package",
+    "package": "npx @vscode/vsce package && node -e \"const fs = require('fs'); const pkg = require('./package.json'); fs.renameSync('claude-restarter-' + pkg.version + '.vsix', 'claude-restarter.vsix');\"",
     "publish": "npx @vscode/vsce publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

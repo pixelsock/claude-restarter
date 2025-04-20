@@ -24,8 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm install
         
-      - name: Package Extension
-        run: npm run package
+      - name: Package Extension with consistent name
+        run: |
+          npm run package
+          # Rename the VSIX file to a consistent name
+          VERSION=$(node -p "require('./package.json').version")
+          mv claude-restarter-$VERSION.vsix claude-restarter.vsix
         
       - name: Publish to VS Code Marketplace
         run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
@@ -33,5 +37,5 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: "*.vsix"
+          files: "claude-restarter.vsix"
           generate_release_notes: true 

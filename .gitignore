@@ -1,4 +1,6 @@
 node_modules/
-*.vsix
+claude-restarter-*.vsix
 .vscode-test/
-.DS_Store 
+.DS_Store
+# Allow this specific file
+!claude-restarter.vsix 
