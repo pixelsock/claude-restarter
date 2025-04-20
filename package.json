@@ -1,0 +1,66 @@
+{
+  "name": "claude-restarter",
+  "displayName": "Claude Restarter",
+  "description": "Restart Claude app automatically when config file is saved",
+  "version": "1.0.0",
+  "publisher": "nick",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR-USERNAME/claude-restarter"
+  },
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "claude-restarter.restartClaude",
+        "title": "Restart Claude Application"
+      }
+    ],
+    "configuration": {
+      "title": "Claude Restarter",
+      "properties": {
+        "claudeRestarter.configFilePath": {
+          "type": "string",
+          "default": "/Users/nick/Library/Application Support/Claude/claude_desktop_config.json",
+          "description": "The path to the Claude config file to watch"
+        },
+        "claudeRestarter.restartDelay": {
+          "type": "number",
+          "default": 2,
+          "description": "Delay in seconds between quitting and restarting Claude"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "claude",
+    "restart"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.88.0",
+    "@vscode/vsce": "^2.24.0",
+    "typescript": "^5.4.3"
+  }
+}
