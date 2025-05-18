@@ -84,7 +84,7 @@ function activate(context) {
         }
     });
     
-    // Create file watcher - use glob pattern for specific file
+    // Create file watcher for the config file
     const fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath, false, false, false);
     
     // When the file is created (useful if it doesn't exist yet)
