@@ -67,7 +67,7 @@ function activate(context) {
     // Get the config file path from settings
     const config = vscode.workspace.getConfiguration('claudeRestarter');
     const defaultPath = getDefaultConfigPath();
-    const configFilePath = config.get('configFilePath', defaultPath);
+    let configFilePath = config.get('configFilePath', defaultPath);
     
     // Log the path we're watching
     console.log(`Claude Restarter is watching for changes to: ${configFilePath}`);
@@ -84,7 +84,7 @@ function activate(context) {
     });
     
     // Create file watcher - use glob pattern for specific file
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath, false, false, false);
+    let fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath, false, false, false);
     
     // When the file is created (useful if it doesn't exist yet)
     fileWatcher.onDidCreate((uri) => {
@@ -124,14 +124,19 @@ function activate(context) {
             // Update the file watcher with the new path
             console.log('Configuration changed, updating file watcher...');
             fileWatcher.dispose();
-            
-            const newConfigPath = vscode.workspace.getConfiguration('claudeRestarter').get('configFilePath', defaultPath);
-            console.log(`New config path: ${newConfigPath}`);
-            
-            if (newConfigPath) {
-                const newFileWatcher = vscode.workspace.createFileSystemWatcher(newConfigPath, false, false, false);
-                
-                newFileWatcher.onDidChange((uri) => {
+
+            configFilePath = vscode.workspace.getConfiguration('claudeRestarter').get('configFilePath', defaultPath);
+            console.log(`New config path: ${configFilePath}`);
+
+            if (configFilePath) {
+                fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath, false, false, false);
+
+                fileWatcher.onDidCreate((uri) => {
+                    console.log(`Claude config file created: ${uri.fsPath}`);
+                    vscode.window.showInformationMessage('Claude config file created, will watch for changes.');
+                });
+
+                fileWatcher.onDidChange((uri) => {
                     console.log(`Claude config file changed: ${uri.fsPath}`);
                     
                     // Ask user if they want to restart Claude
@@ -150,8 +155,13 @@ function activate(context) {
                     });
                 });
                 
-                context.subscriptions.push(newFileWatcher);
-                vscode.window.showInformationMessage(`Now watching: ${newConfigPath}`);
+                fileWatcher.onDidDelete((uri) => {
+                    console.log(`Claude config file deleted: ${uri.fsPath}`);
+                    vscode.window.showWarningMessage('Claude config file deleted. Will no longer restart Claude automatically.');
+                });
+
+                context.subscriptions.push(fileWatcher);
+                vscode.window.showInformationMessage(`Now watching: ${configFilePath}`);
             }
         }
     });
