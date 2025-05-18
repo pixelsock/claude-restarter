@@ -68,7 +68,7 @@ function activate(context) {
     // Get the config file path from settings
     const config = vscode.workspace.getConfiguration('claudeRestarter');
     const defaultPath = getDefaultConfigPath();
-    const configFilePath = config.get('configFilePath', defaultPath);
+    let configFilePath = config.get('configFilePath', defaultPath);
     
     // Log the path we're watching
     console.log(`Claude Restarter is watching for changes to: ${configFilePath}`);
@@ -85,7 +85,7 @@ function activate(context) {
     });
     
     // Create file watcher - use glob pattern for specific file
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath, false, false, false);
+    let fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath, false, false, false);
     
     // When the file is created (useful if it doesn't exist yet)
     fileWatcher.onDidCreate((uri) => {
@@ -125,7 +125,7 @@ function activate(context) {
             // Update the file watcher with the new path
             console.log('Configuration changed, updating file watcher...');
             fileWatcher.dispose();
-            
+
             const newConfigPath = vscode.workspace.getConfiguration('claudeRestarter').get('configFilePath', defaultPath);
             console.log(`New config path: ${newConfigPath}`);
             
@@ -152,6 +152,8 @@ function activate(context) {
                 });
                 
                 context.subscriptions.push(newFileWatcher);
+                fileWatcher = newFileWatcher;
+                configFilePath = newConfigPath;
                 vscode.window.showInformationMessage(`Now watching: ${newConfigPath}`);
             }
         }

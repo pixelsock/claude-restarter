@@ -25,10 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Get the config file path from settings
     const config = vscode.workspace.getConfiguration('claudeRestarter');
-    const configFilePath = config.get<string>('configFilePath', '/Users/nick/Library/Application Support/Claude/claude_desktop_config.json');
+    let configFilePath = config.get<string>('configFilePath', '/Users/nick/Library/Application Support/Claude/claude_desktop_config.json');
     
     // File watcher for the config file
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath);
+    let fileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath);
     
     // When the file is saved, restart Claude
     fileWatcher.onDidChange(() => {
@@ -49,6 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
                     restartClaude();
                 });
                 context.subscriptions.push(newFileWatcher);
+                fileWatcher = newFileWatcher;
+                configFilePath = newConfigPath;
             }
         }
     });
