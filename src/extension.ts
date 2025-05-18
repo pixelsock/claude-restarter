@@ -1,5 +1,17 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
+import * as os from 'os';
+import * as path from 'path';
+
+export function getDefaultConfigPath(): string {
+    const platform = os.platform();
+    if (platform === 'darwin') {
+        return path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+    } else if (platform === 'win32') {
+        return path.join(os.homedir(), 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json');
+    }
+    return path.join(os.homedir(), '.config', 'Claude', 'claude_desktop_config.json');
+}
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Claude Restarter extension is now active');

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
+exports.getDefaultConfigPath = getDefaultConfigPath;
 const vscode = require("vscode");
 const cp = require("child_process");
 const os = require("os");
