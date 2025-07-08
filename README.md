@@ -8,6 +8,7 @@ A VS Code extension that automatically restarts the Claude desktop application w
 - Provides a command to manually restart Claude
 - Status bar icon with quick access to Claude options
 - Edit Claude's configuration file directly from VS Code
+- Watches the configuration path for changes even if the file is recreated
 - Cross-platform support (macOS and Windows)
 
 ## Installation
@@ -23,7 +24,7 @@ The extension provides the following settings:
 
 ## Usage
 
-1. The extension automatically watches for changes to the Claude configuration file.
+1. The extension automatically watches for changes to the Claude configuration file and updates the watcher if the location changes.
 2. When the file is saved, you'll be prompted if you want to restart Claude.
 3. Click the Claude icon in the status bar to access quick options:
    - Edit Claude Config - Opens the Claude configuration file in VS Code
