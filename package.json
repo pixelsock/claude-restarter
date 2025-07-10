@@ -2,7 +2,7 @@
   "name": "claude-restarter",
   "displayName": "Claude Restarter",
   "description": "Restart Claude app automatically when config file is saved",
-  "version": "1.1.6",
+  "version": "1.2.0",
   "publisher": "StumpWorks",
   "repository": {
     "type": "git",
