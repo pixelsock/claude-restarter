@@ -87,19 +87,24 @@ class ClaudeManager {
         // Auto-discover config on first activation if needed
         const autoDiscover = vscode.workspace.getConfiguration('claudeRestarter').get('findClaudeConfigAutomatically', true);
         const currentPath = vscode.workspace.getConfiguration('claudeRestarter').get('configFilePath', '');
+        const expandedPath = currentPath.replace(/\$\{env:(\w+)\}/g, (match, envVar) => process.env[envVar] || match);
         if (autoDiscover && !currentPath) {
             // Config path is empty, offer to find it
             vscode.window.showInformationMessage('Claude config path not set. Would you like to auto-find it?', 'Find Config', 'Skip').then(choice => {
                 if (choice === 'Find Config') {
-                    this.findClaudeConfigAutomatically();
+                    this.findClaudeConfigAutomatically().catch(err => {
+                        vscode.window.showErrorMessage(`Failed to find config: ${err.message}`);
+                    });
                 }
             });
         }
-        else if (autoDiscover && currentPath && !fs.existsSync(currentPath.replace(/\$\{env:(\w+)\}/g, (match, envVar) => process.env[envVar] || match))) {
+        else if (autoDiscover && currentPath && !fs.existsSync(expandedPath)) {
             // Config path is set but doesn't exist, offer to find a new one
             vscode.window.showWarningMessage('Claude config file not found at configured path. Would you like to search for it?', 'Find Config', 'Skip').then(choice => {
                 if (choice === 'Find Config') {
-                    this.findClaudeConfigAutomatically();
+                    this.findClaudeConfigAutomatically().catch(err => {
+                        vscode.window.showErrorMessage(`Failed to find config: ${err.message}`);
+                    });
                 }
             });
         }
@@ -114,7 +119,21 @@ class ClaudeManager {
         const restart = vscode.commands.registerCommand('claude-restarter.restartClaude', () => this.restartClaude());
         const openConfig = vscode.commands.registerCommand('claude-restarter.openClaudeConfig', () => this.openClaudeConfig());
         const showOptions = vscode.commands.registerCommand('claude-restarter.showOptions', () => this.showOptions());
-        const findConfig = vscode.commands.registerCommand('claude-restarter.findConfigFile', () => this.findClaudeConfigAutomatically());
+        const findConfig = vscode.commands.registerCommand('claude-restarter.findConfigFile', () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield this.findClaudeConfigAutomatically();
+                if (result) {
+                    vscode.window.showInformationMessage(`Claude config found and saved: ${result}`);
+                }
+                else {
+                    vscode.window.showInformationMessage('No Claude config file found');
+                }
+            }
+            catch (err) {
+                vscode.window.showErrorMessage(`Error finding config: ${err.message}`);
+                console.error('findConfigFile error:', err);
+            }
+        }));
         this.context.subscriptions.push(restart, openConfig, showOptions, findConfig);
     }
     createStatusBar() {
