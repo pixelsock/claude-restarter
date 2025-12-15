@@ -90,6 +90,11 @@ class ClaudeManager {
     }
     promptRestart(uri) {
         console.log(`Claude config changed: ${uri.fsPath}`);
+        const autoRestart = vscode.workspace.getConfiguration('claudeRestarter').get('autoRestartOnSave', false);
+        if (autoRestart) {
+            this.restartClaude();
+            return;
+        }
         vscode.window
             .showInformationMessage('Claude config saved. Restart Claude Desktop?', 'Yes', 'No')
             .then(sel => {

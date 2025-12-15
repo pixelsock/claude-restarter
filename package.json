@@ -46,6 +46,11 @@
           "type": "number",
           "default": 2,
           "description": "Delay in seconds between quitting and restarting Claude"
+        },
+        "claudeRestarter.autoRestartOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically restart Claude Desktop when the config file is saved (no prompt)"
         }
       }
     }
@@ -55,10 +60,12 @@
     "compile": "echo 'Skipping compilation, using existing files'",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
+    "test": "node ./test/getDefaultConfigPath.test.js",
+    "test:env-expansion": "node ./test/env-expansion.test.js",
+    "test:all": "npm run test && npm run test:env-expansion",
     "package": "npx @vscode/vsce package",
     "package-rename": "npx @vscode/vsce package && node -e \"const fs = require('fs'); const pkg = require('./package.json'); try { fs.renameSync('claude-restarter-' + pkg.version + '.vsix', 'claude-restarter.vsix'); console.log('Renamed VSIX file successfully'); } catch(e) { console.error('Error renaming file:', e.message); }\"",
-    "publish": "npx @vscode/vsce publish",
-    "test": "node ./test/getDefaultConfigPath.test.js"
+    "publish": "npx @vscode/vsce publish"
   },
   "keywords": [
     "claude",
