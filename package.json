@@ -32,6 +32,11 @@
       {
         "command": "claude-restarter.showOptions",
         "title": "Show Claude Options"
+      },
+      {
+        "command": "claude-restarter.findConfigFile",
+        "title": "Find Claude Config File",
+        "description": "Automatically search for the Claude config file"
       }
     ],
     "configuration": {

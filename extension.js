@@ -86,11 +86,22 @@ class ClaudeManager {
         this.createStatusBar();
         // Auto-discover config on first activation if needed
         const autoDiscover = vscode.workspace.getConfiguration('claudeRestarter').get('findClaudeConfigAutomatically', true);
-        if (autoDiscover) {
-            const configPath = this.getConfigPath();
-            if (!fs.existsSync(configPath)) {
-                this.findClaudeConfigAutomatically();
-            }
+        const currentPath = vscode.workspace.getConfiguration('claudeRestarter').get('configFilePath', '');
+        if (autoDiscover && !currentPath) {
+            // Config path is empty, offer to find it
+            vscode.window.showInformationMessage('Claude config path not set. Would you like to auto-find it?', 'Find Config', 'Skip').then(choice => {
+                if (choice === 'Find Config') {
+                    this.findClaudeConfigAutomatically();
+                }
+            });
+        }
+        else if (autoDiscover && currentPath && !fs.existsSync(currentPath.replace(/\$\{env:(\w+)\}/g, (match, envVar) => process.env[envVar] || match))) {
+            // Config path is set but doesn't exist, offer to find a new one
+            vscode.window.showWarningMessage('Claude config file not found at configured path. Would you like to search for it?', 'Find Config', 'Skip').then(choice => {
+                if (choice === 'Find Config') {
+                    this.findClaudeConfigAutomatically();
+                }
+            });
         }
         this.updateWatcher();
         this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
@@ -103,7 +114,8 @@ class ClaudeManager {
         const restart = vscode.commands.registerCommand('claude-restarter.restartClaude', () => this.restartClaude());
         const openConfig = vscode.commands.registerCommand('claude-restarter.openClaudeConfig', () => this.openClaudeConfig());
         const showOptions = vscode.commands.registerCommand('claude-restarter.showOptions', () => this.showOptions());
-        this.context.subscriptions.push(restart, openConfig, showOptions);
+        const findConfig = vscode.commands.registerCommand('claude-restarter.findConfigFile', () => this.findClaudeConfigAutomatically());
+        this.context.subscriptions.push(restart, openConfig, showOptions, findConfig);
     }
     createStatusBar() {
         this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
