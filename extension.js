@@ -120,8 +120,11 @@ class ClaudeManager {
         const openConfig = vscode.commands.registerCommand('claude-restarter.openClaudeConfig', () => this.openClaudeConfig());
         const showOptions = vscode.commands.registerCommand('claude-restarter.showOptions', () => this.showOptions());
         const findConfig = vscode.commands.registerCommand('claude-restarter.findConfigFile', () => __awaiter(this, void 0, void 0, function* () {
+            console.log('🔍 findConfigFile command triggered');
             try {
+                vscode.window.showInformationMessage('Searching for Claude config...');
                 const result = yield this.findClaudeConfigAutomatically();
+                console.log('🔍 findClaudeConfigAutomatically result:', result);
                 if (result) {
                     vscode.window.showInformationMessage(`Claude config found and saved: ${result}`);
                 }
@@ -130,8 +133,8 @@ class ClaudeManager {
                 }
             }
             catch (err) {
+                console.error('❌ findConfigFile error:', err);
                 vscode.window.showErrorMessage(`Error finding config: ${err.message}`);
-                console.error('findConfigFile error:', err);
             }
         }));
         this.context.subscriptions.push(restart, openConfig, showOptions, findConfig);
@@ -155,9 +158,13 @@ class ClaudeManager {
     }
     findClaudeConfigAutomatically() {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log('🔍 Starting findClaudeConfigAutomatically');
             const defaultPath = this.getConfigPath();
+            console.log('🔍 Default path:', defaultPath);
             // Try default path first
             if (fs.existsSync(defaultPath)) {
+                console.log('✅ Found config at default path');
+                yield vscode.workspace.getConfiguration('claudeRestarter').update('configFilePath', defaultPath, vscode.ConfigurationTarget.Global);
                 return defaultPath;
             }
             // Search alternative locations
@@ -168,26 +175,33 @@ class ClaudeManager {
                 path.join(homeDir, '.config/Claude/claude_desktop_config.json'),
                 path.join(homeDir, '.claude-config.json'),
             ];
+            console.log('🔍 Searching alternative paths:', altPaths);
             for (const p of altPaths) {
                 if (fs.existsSync(p)) {
-                    console.log(`Found Claude config at: ${p}`);
+                    console.log(`✅ Found Claude config at: ${p}`);
+                    yield vscode.workspace.getConfiguration('claudeRestarter').update('configFilePath', p, vscode.ConfigurationTarget.Global);
                     return p;
                 }
             }
             // Not found anywhere, prompt user to browse
+            console.log('📂 Opening file picker dialog');
             const picked = yield vscode.window.showOpenDialog({
                 defaultUri: vscode.Uri.file(homeDir),
                 filters: { 'Claude Config': ['json'] },
                 canSelectFiles: true,
+                canSelectMany: false,
                 openLabel: 'Select Claude Config File',
+                title: 'Find Claude Config File'
             });
+            console.log('📂 File picker result:', picked);
             if (picked && picked[0]) {
                 const foundPath = picked[0].fsPath;
+                console.log('✅ User selected:', foundPath);
                 // Save user's choice to settings
-                vscode.workspace.getConfiguration('claudeRestarter').update('configFilePath', foundPath, vscode.ConfigurationTarget.Global);
-                vscode.window.showInformationMessage(`Claude config saved to settings: ${foundPath}`);
+                yield vscode.workspace.getConfiguration('claudeRestarter').update('configFilePath', foundPath, vscode.ConfigurationTarget.Global);
                 return foundPath;
             }
+            console.log('❌ No config file found or selected');
             return null;
         });
     }
@@ -235,17 +249,12 @@ class ClaudeManager {
             }, (progress) => __awaiter(this, void 0, void 0, function* () {
                 progress.report({ increment: 0 });
                 yield new Promise(resolve => {
-                    const originalRestart = this.restartClaude.bind(this);
-                    this.restartClaude = () => {
-                        progress.report({ increment: 50 });
-                        originalRestart();
-                        setTimeout(() => {
-                            progress.report({ increment: 100 });
-                            resolve(null);
-                        }, 2000);
-                    };
-                    this.restartClaude();
-                    this.restartClaude = originalRestart;
+                    progress.report({ increment: 50 });
+                    this.restartClaude(true); // silent mode - don't show additional notifications
+                    setTimeout(() => {
+                        progress.report({ increment: 100 });
+                        resolve(null);
+                    }, 2000);
                 });
             }));
             return;
@@ -286,7 +295,7 @@ class ClaudeManager {
             }
         });
     }
-    restartClaude() {
+    restartClaude(silent = false) {
         const restartDelay = vscode.workspace.getConfiguration('claudeRestarter').get('restartDelay', 2);
         const platform = os.platform();
         const configPath = this.getConfigPath();
@@ -306,7 +315,7 @@ class ClaudeManager {
                 if (err) {
                     this.showNotification(`Failed to restart Claude: ${err.message}`, 'error');
                 }
-                else {
+                else if (!silent) {
                     this.checkClaudeHealth().then(healthy => {
                         if (healthy) {
                             this.showNotification('Claude restarted successfully');
@@ -329,7 +338,7 @@ class ClaudeManager {
                         if (startErr) {
                             this.showNotification(`Failed to start Claude: ${startErr.message}`, 'error');
                         }
-                        else {
+                        else if (!silent) {
                             this.checkClaudeHealth().then(healthy => {
                                 if (healthy) {
                                     this.showNotification('Claude restarted successfully');
