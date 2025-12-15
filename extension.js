@@ -1,13 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getDefaultConfigPath = getDefaultConfigPath;
 exports.activate = activate;
 exports.deactivate = deactivate;
-exports.getDefaultConfigPath = getDefaultConfigPath;
 const vscode = require("vscode");
 const cp = require("child_process");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
+function getDefaultConfigPath() {
+    const platform = os.platform();
+    if (platform === 'darwin') {
+        return path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+    }
+    else if (platform === 'win32') {
+        return path.join(os.homedir(), 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json');
+    }
+    return path.join(os.homedir(), '.config', 'Claude', 'claude_desktop_config.json');
+}
 class ClaudeManager {
     constructor(context) {
         this.context = context;
@@ -38,7 +48,12 @@ class ClaudeManager {
     }
     getConfigPath() {
         const config = vscode.workspace.getConfiguration('claudeRestarter');
-        return config.get('configFilePath', getDefaultConfigPath());
+        let configPath = config.get('configFilePath', getDefaultConfigPath());
+        // Expand environment variables in the path
+        configPath = configPath.replace(/\$\{env:(\w+)\}/g, (match, envVar) => {
+            return process.env[envVar] || match;
+        });
+        return configPath;
     }
     updateWatcher() {
         const configPath = this.getConfigPath();
@@ -58,7 +73,9 @@ class ClaudeManager {
     }
     promptRestart(uri) {
         console.log(`Claude config changed: ${uri.fsPath}`);
-        vscode.window.showInformationMessage('Claude config saved. Restart Claude Desktop?', 'Yes', 'No').then(sel => {
+        vscode.window
+            .showInformationMessage('Claude config saved. Restart Claude Desktop?', 'Yes', 'No')
+            .then(sel => {
             if (sel === 'Yes') {
                 this.restartClaude();
             }
@@ -75,10 +92,12 @@ class ClaudeManager {
         });
     }
     showOptions() {
-        vscode.window.showQuickPick([
+        vscode.window
+            .showQuickPick([
             { label: '$(edit) Edit Claude Config', id: 'config' },
             { label: '$(refresh) Restart Claude Desktop', id: 'restart' }
-        ], { placeHolder: 'Claude Desktop Options' }).then(selection => {
+        ], { placeHolder: 'Claude Desktop Options' })
+            .then(selection => {
             if (!selection) {
                 return;
             }
@@ -137,20 +156,11 @@ class ClaudeManager {
     }
 }
 let manager;
-function getDefaultConfigPath() {
-    const platform = os.platform();
-    if (platform === 'darwin') {
-        return path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
-    }
-    else if (platform === 'win32') {
-        return path.join(os.homedir(), 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json');
-    }
-    return path.join(os.homedir(), '.config', 'Claude', 'claude_desktop_config.json');
-}
 function activate(context) {
     manager = new ClaudeManager(context);
     manager.activate();
 }
 function deactivate() {
     manager === null || manager === void 0 ? void 0 : manager.dispose();
-}//# sourceMappingURL=extension.js.map
+}
+//# sourceMappingURL=extension.js.map

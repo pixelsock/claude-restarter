@@ -52,7 +52,14 @@ class ClaudeManager {
 
     private getConfigPath(): string {
         const config = vscode.workspace.getConfiguration('claudeRestarter');
-        return config.get<string>('configFilePath', getDefaultConfigPath());
+        let configPath = config.get<string>('configFilePath', getDefaultConfigPath());
+        
+        // Expand environment variables in the path
+        configPath = configPath.replace(/\$\{env:(\w+)\}/g, (match, envVar) => {
+            return process.env[envVar] || match;
+        });
+        
+        return configPath;
     }
 
     private updateWatcher() {
