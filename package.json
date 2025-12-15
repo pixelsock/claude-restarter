@@ -61,6 +61,11 @@
           "type": "boolean",
           "default": true,
           "description": "Check if Claude is running after restart attempt"
+        },
+        "claudeRestarter.findClaudeConfigAutomatically": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically search for Claude config file and prompt to browse if not found"
         }
       }
     }

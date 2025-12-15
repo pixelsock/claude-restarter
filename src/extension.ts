@@ -74,6 +74,16 @@ class ClaudeManager {
     public activate() {
         this.registerCommands();
         this.createStatusBar();
+        
+        // Auto-discover config on first activation if needed
+        const autoDiscover = vscode.workspace.getConfiguration('claudeRestarter').get<boolean>('findClaudeConfigAutomatically', true);
+        if (autoDiscover) {
+            const configPath = this.getConfigPath();
+            if (!fs.existsSync(configPath)) {
+                this.findClaudeConfigAutomatically();
+            }
+        }
+        
         this.updateWatcher();
 
         this.context.subscriptions.push(
@@ -111,6 +121,49 @@ class ClaudeManager {
         });
         
         return configPath;
+    }
+
+    private async findClaudeConfigAutomatically(): Promise<string | null> {
+        const defaultPath = this.getConfigPath();
+        
+        // Try default path first
+        if (fs.existsSync(defaultPath)) {
+            return defaultPath;
+        }
+
+        // Search alternative locations
+        const homeDir = os.homedir();
+        const altPaths = [
+            path.join(homeDir, 'Library/Application Support/Claude/claude_desktop_config.json'),
+            path.join(homeDir, 'AppData/Roaming/Claude/claude_desktop_config.json'),
+            path.join(homeDir, '.config/Claude/claude_desktop_config.json'),
+            path.join(homeDir, '.claude-config.json'),
+        ];
+
+        for (const p of altPaths) {
+            if (fs.existsSync(p)) {
+                console.log(`Found Claude config at: ${p}`);
+                return p;
+            }
+        }
+
+        // Not found anywhere, prompt user to browse
+        const picked = await vscode.window.showOpenDialog({
+            defaultUri: vscode.Uri.file(homeDir),
+            filters: { 'Claude Config': ['json'] },
+            canSelectFiles: true,
+            openLabel: 'Select Claude Config File',
+        });
+
+        if (picked && picked[0]) {
+            const foundPath = picked[0].fsPath;
+            // Save user's choice to settings
+            vscode.workspace.getConfiguration('claudeRestarter').update('configFilePath', foundPath, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(`Claude config saved to settings: ${foundPath}`);
+            return foundPath;
+        }
+
+        return null;
     }
 
     private updateWatcher() {
@@ -152,7 +205,26 @@ class ClaudeManager {
         console.log(`Claude config changed: ${uri.fsPath}`);
         const autoRestart = vscode.workspace.getConfiguration('claudeRestarter').get<boolean>('autoRestartOnSave', false);
         if (autoRestart) {
-            this.restartClaude();
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Restarting Claude Desktop...',
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 0 });
+                await new Promise(resolve => {
+                    const originalRestart = this.restartClaude.bind(this);
+                    this.restartClaude = () => {
+                        progress.report({ increment: 50 });
+                        originalRestart();
+                        setTimeout(() => {
+                            progress.report({ increment: 100 });
+                            resolve(null);
+                        }, 2000);
+                    };
+                    this.restartClaude();
+                    this.restartClaude = originalRestart;
+                });
+            });
             return;
         }
         vscode.window
