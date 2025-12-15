@@ -21,6 +21,56 @@ class ClaudeManager {
 
     constructor(private context: vscode.ExtensionContext) {}
 
+    private validateConfigJSON(configPath: string): { valid: boolean; error?: string } {
+        try {
+            const content = fs.readFileSync(configPath, 'utf-8');
+            JSON.parse(content);
+            return { valid: true };
+        } catch (error: any) {
+            return { valid: false, error: error.message };
+        }
+    }
+
+    private showNotification(message: string, type: 'info' | 'warn' | 'error' = 'info') {
+        const shouldShowNotifications = vscode.workspace.getConfiguration('claudeRestarter').get<boolean>('showDesktopNotifications', true);
+        if (!shouldShowNotifications) {
+            return;
+        }
+        if (type === 'error') {
+            vscode.window.showErrorMessage(`Claude Restarter: ${message}`);
+        } else if (type === 'warn') {
+            vscode.window.showWarningMessage(`Claude Restarter: ${message}`);
+        } else {
+            vscode.window.showInformationMessage(`Claude Restarter: ${message}`);
+        }
+    }
+
+    private async checkClaudeHealth(): Promise<boolean> {
+        const platform = os.platform();
+        const performHealthCheck = vscode.workspace.getConfiguration('claudeRestarter').get<boolean>('performHealthCheck', true);
+
+        if (!performHealthCheck) {
+            return true;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (platform === 'darwin') {
+            return new Promise(resolve => {
+                cp.exec('pgrep -f "Claude.app" > /dev/null', (error) => {
+                    resolve(!error);
+                });
+            });
+        } else if (platform === 'win32') {
+            return new Promise(resolve => {
+                cp.exec('tasklist | find /i "Claude.exe" > nul', (error) => {
+                    resolve(!error);
+                });
+            });
+        }
+        return true;
+    }
+
     public activate() {
         this.registerCommands();
         this.createStatusBar();
@@ -149,6 +199,14 @@ class ClaudeManager {
     private restartClaude() {
         const restartDelay = vscode.workspace.getConfiguration('claudeRestarter').get<number>('restartDelay', 2);
         const platform = os.platform();
+        const configPath = this.getConfigPath();
+
+        // Validate config before restart
+        const validation = this.validateConfigJSON(configPath);
+        if (!validation.valid) {
+            this.showNotification(`Config validation failed: ${validation.error}`, 'error');
+            return;
+        }
 
         if (platform === 'darwin') {
             const script = `if application "Claude" is running then
@@ -158,29 +216,41 @@ class ClaudeManager {
             tell application "Claude" to activate`;
             cp.exec(`osascript -e '${script}'`, err => {
                 if (err) {
-                    vscode.window.showErrorMessage(`Failed to restart Claude: ${err.message}`);
+                    this.showNotification(`Failed to restart Claude: ${err.message}`, 'error');
                 } else {
-                    vscode.window.showInformationMessage('Claude restarted successfully');
+                    this.checkClaudeHealth().then(healthy => {
+                        if (healthy) {
+                            this.showNotification('Claude restarted successfully');
+                        } else {
+                            this.showNotification('Claude restart may have failed - app not detected', 'warn');
+                        }
+                    });
                 }
             });
         } else if (platform === 'win32') {
             cp.exec(`taskkill /f /im Claude.exe`, error => {
                 if (error && error.code !== 128) {
-                    vscode.window.showErrorMessage(`Failed to close Claude: ${error.message}`);
+                    this.showNotification(`Failed to close Claude: ${error.message}`, 'error');
                     return;
                 }
                 setTimeout(() => {
                     cp.exec('start "" "Claude.exe"', startErr => {
                         if (startErr) {
-                            vscode.window.showErrorMessage(`Failed to start Claude: ${startErr.message}`);
+                            this.showNotification(`Failed to start Claude: ${startErr.message}`, 'error');
                         } else {
-                            vscode.window.showInformationMessage('Claude restarted successfully');
+                            this.checkClaudeHealth().then(healthy => {
+                                if (healthy) {
+                                    this.showNotification('Claude restarted successfully');
+                                } else {
+                                    this.showNotification('Claude restart may have failed - app not detected', 'warn');
+                                }
+                            });
                         }
                     });
                 }, restartDelay * 1000);
             });
         } else {
-            vscode.window.showErrorMessage('Restarting Claude is only supported on macOS and Windows');
+            this.showNotification('Restarting Claude is only supported on macOS and Windows', 'error');
         }
     }
 

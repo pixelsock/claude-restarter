@@ -51,10 +51,28 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically restart Claude Desktop when the config file is saved (no prompt)"
+        },
+        "claudeRestarter.showDesktopNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notifications when Claude is restarted or errors occur"
+        },
+        "claudeRestarter.performHealthCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check if Claude is running after restart attempt"
         }
       }
     }
   },
+  "keybindings": [
+    {
+      "command": "claude-restarter.restartClaude",
+      "key": "ctrl+shift+r",
+      "mac": "cmd+shift+r",
+      "when": "!inputFocus"
+    }
+  ],
   "scripts": {
     "vscode:prepublish": "echo 'Skipping compilation, using existing files'",
     "compile": "echo 'Skipping compilation, using existing files'",
