@@ -59,17 +59,34 @@ class ClaudeManager {
         const configPath = this.getConfigPath();
         if (this.fileWatcher) {
             this.fileWatcher.dispose();
+            this.fileWatcher = undefined;
         }
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher(configPath, false, false, false);
-        this.fileWatcher.onDidChange(uri => this.promptRestart(uri));
-        this.fileWatcher.onDidCreate(uri => {
-            console.log(`Claude config created: ${uri.fsPath}`);
-            vscode.window.showInformationMessage('Claude config file created. Watching for changes.');
-        });
-        this.fileWatcher.onDidDelete(() => {
-            vscode.window.showWarningMessage('Claude config file deleted. Automatic restart disabled.');
-        });
-        this.context.subscriptions.push(this.fileWatcher);
+        if (this.fsWatcher) {
+            this.fsWatcher.close();
+            this.fsWatcher = undefined;
+        }
+        // Use Node's fs.watch to reliably detect atomic saves and renames
+        const dir = path.dirname(configPath);
+        const fileName = path.basename(configPath);
+        try {
+            this.fsWatcher = fs.watch(dir, { persistent: true }, (eventType, changedName) => {
+                if (!changedName) {
+                    return;
+                }
+                if (changedName === fileName) {
+                    const uri = vscode.Uri.file(configPath);
+                    if (eventType === 'change' || eventType === 'rename') {
+                        // 'rename' can be emitted on create or delete depending on atomic writes
+                        this.promptRestart(uri);
+                    }
+                }
+            });
+            this.context.subscriptions.push({ dispose: () => { var _a; return (_a = this.fsWatcher) === null || _a === void 0 ? void 0 : _a.close(); } });
+            console.log(`Watching Claude config: ${configPath}`);
+        }
+        catch (err) {
+            vscode.window.showErrorMessage(`Failed to watch Claude config: ${err.message}`);
+        }
     }
     promptRestart(uri) {
         console.log(`Claude config changed: ${uri.fsPath}`);
@@ -150,9 +167,10 @@ class ClaudeManager {
         }
     }
     dispose() {
-        var _a, _b;
+        var _a, _b, _c;
         (_a = this.fileWatcher) === null || _a === void 0 ? void 0 : _a.dispose();
-        (_b = this.statusBar) === null || _b === void 0 ? void 0 : _b.dispose();
+        (_b = this.fsWatcher) === null || _b === void 0 ? void 0 : _b.close();
+        (_c = this.statusBar) === null || _c === void 0 ? void 0 : _c.dispose();
     }
 }
 let manager;
