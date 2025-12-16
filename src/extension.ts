@@ -256,20 +256,18 @@ class ClaudeManager {
         console.log(`Claude config changed: ${uri.fsPath}`);
         const autoRestart = vscode.workspace.getConfiguration('claudeRestarter').get<boolean>('autoRestartOnSave', false);
         if (autoRestart) {
+            // Show single progress notification, suppress all other notifications
             vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: 'Restarting Claude Desktop...',
                 cancellable: false
             }, async (progress) => {
                 progress.report({ increment: 0 });
-                await new Promise(resolve => {
-                    progress.report({ increment: 50 });
-                    this.restartClaude(true); // silent mode - don't show additional notifications
-                    setTimeout(() => {
-                        progress.report({ increment: 100 });
-                        resolve(null);
-                    }, 2000);
-                });
+                this.restartClaude(true); // silent mode
+                // Wait for restart delay + some buffer
+                const restartDelay = vscode.workspace.getConfiguration('claudeRestarter').get<number>('restartDelay', 2);
+                await new Promise(resolve => setTimeout(resolve, (restartDelay + 1) * 1000));
+                progress.report({ increment: 100 });
             });
             return;
         }

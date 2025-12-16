@@ -84,8 +84,8 @@
     }
   ],
   "scripts": {
-    "vscode:prepublish": "echo 'Skipping compilation, using existing files'",
-    "compile": "echo 'Skipping compilation, using existing files'",
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
     "test": "node ./test/getDefaultConfigPath.test.js",
