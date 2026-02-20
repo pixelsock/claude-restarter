@@ -30,6 +30,20 @@ function getDefaultConfigPath() {
 class ClaudeManager {
     constructor(context) {
         this.context = context;
+        this.lastMcpServersHash = '';
+        this.restartCooldown = false;
+    }
+    getMcpServersHash(configPath) {
+        var _a;
+        try {
+            const content = fs.readFileSync(configPath, 'utf-8');
+            const parsed = JSON.parse(content);
+            const mcpServers = (_a = parsed.mcpServers) !== null && _a !== void 0 ? _a : {};
+            return JSON.stringify(mcpServers);
+        }
+        catch (_b) {
+            return '';
+        }
     }
     validateConfigJSON(configPath) {
         try {
@@ -215,6 +229,8 @@ class ClaudeManager {
             this.fsWatcher.close();
             this.fsWatcher = undefined;
         }
+        // Seed the initial mcpServers hash so we don't fire on first-read
+        this.lastMcpServersHash = this.getMcpServersHash(configPath);
         // Use Node's fs.watch to reliably detect atomic saves and renames
         const dir = path.dirname(configPath);
         const fileName = path.basename(configPath);
@@ -223,16 +239,33 @@ class ClaudeManager {
                 if (!changedName) {
                     return;
                 }
-                if (changedName === fileName) {
-                    const uri = vscode.Uri.file(configPath);
-                    if (eventType === 'change' || eventType === 'rename') {
-                        // 'rename' can be emitted on create or delete depending on atomic writes
-                        this.promptRestart(uri);
-                    }
+                if (changedName !== fileName) {
+                    return;
                 }
+                if (eventType !== 'change' && eventType !== 'rename') {
+                    return;
+                }
+                // Ignore changes Claude desktop makes to its own preferences
+                // (sidebarMode, coworkScheduledTasksEnabled, etc.) — only restart
+                // when the mcpServers section actually changes.
+                const currentHash = this.getMcpServersHash(configPath);
+                if (currentHash === this.lastMcpServersHash) {
+                    console.log('Claude config changed but mcpServers unchanged — skipping restart');
+                    return;
+                }
+                this.lastMcpServersHash = currentHash;
+                // Cooldown: ignore rapid re-triggers (e.g. Claude writing back immediately
+                // after a restart, which would cause a crash loop).
+                if (this.restartCooldown) {
+                    console.log('Restart cooldown active — skipping prompt');
+                    return;
+                }
+                this.restartCooldown = true;
+                setTimeout(() => { this.restartCooldown = false; }, 10000);
+                this.promptRestart(vscode.Uri.file(configPath));
             });
             this.context.subscriptions.push({ dispose: () => { var _a; return (_a = this.fsWatcher) === null || _a === void 0 ? void 0 : _a.close(); } });
-            console.log(`Watching Claude config: ${configPath}`);
+            console.log(`Watching Claude config (mcpServers only): ${configPath}`);
         }
         catch (err) {
             vscode.window.showErrorMessage(`Failed to watch Claude config: ${err.message}`);
@@ -303,6 +336,10 @@ class ClaudeManager {
             this.showNotification(`Config validation failed: ${validation.error}`, 'error');
             return;
         }
+        // Refresh hash so preference writes Claude makes on startup don't re-trigger
+        this.lastMcpServersHash = this.getMcpServersHash(configPath);
+        this.restartCooldown = true;
+        setTimeout(() => { this.restartCooldown = false; }, 15000);
         if (platform === 'darwin') {
             const script = `if application "Claude" is running then
                 tell application "Claude" to quit
